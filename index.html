@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>System BatContact</title>
+
+  <style>
+    :root{
+      --main:#2aa8ff;
+      --dark:#05070d;
+      --panel:#0b1220;
+      --text:#bfe6ff;
+      --danger:#ff3b3b;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: radial-gradient(circle at top, #0b1a2a, black);
+      color: var(--text);
+      font-family: monospace;
+    }
+
+    body {
+      height: 100dvh;
+      padding-top: env(safe-area-inset-top);
+    }
+
+    /* BOOT */
+    #bootScreen{
+      position:fixed;
+      inset:0;
+      background:black;
+      z-index:99999;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+    }
+
+    .bootTitle{
+      font-size:18px;
+      letter-spacing:4px;
+      color:var(--main);
+      animation:flicker 1.2s infinite;
+      text-align:center;
+    }
+
+    .bootBar{
+      width:260px;
+      height:2px;
+      border:1px solid var(--main);
+      margin-top:20px;
+      overflow:hidden;
+      border-radius:10px;
+    }
+
+    .bootFill{
+      height:100%;
+      width:0;
+      background:var(--main);
+      animation:load 3.5s forwards;
+    }
+
+    @keyframes load{from{width:0}to{width:100%}}
+    @keyframes flicker{50%{opacity:.3}}
+
+    /* LOGIN */
+    #loginScreen{
+      position:fixed;
+      inset:0;
+      display:none;
+      justify-content:center;
+      align-items:center;
+      flex-direction:column;
+      background:black;
+      z-index:9999;
+      height:100dvh;
+    }
+
+    #loginError{
+      color:var(--danger);
+      margin-top:10px;
+      font-size:14px;
+      display:none;
+    }
+
+    input, textarea{
+      width:100%;
+      padding:12px;
+      margin:6px 0;
+      background:#0b1220;
+      border:1px solid var(--main);
+      color:var(--text);
+      outline:none;
+      border-radius:8px;
+      font-size:16px;
+    }
+
+    button{
+      width:100%;
+      padding:12px;
+      background:linear-gradient(90deg,#2aa8ff,#1b6cff);
+      border:none;
+      color:white;
+      font-weight:bold;
+      cursor:pointer;
+      border-radius:10px;
+      transition:.2s;
+    }
+
+    button:hover{
+      transform:scale(1.02);
+      box-shadow:0 0 12px rgba(42,168,255,0.6);
+    }
+
+    header{
+      padding:18px;
+      font-size:22px;
+      border-bottom:1px solid var(--main);
+      text-shadow:0 0 10px var(--main);
+    }
+
+    /* MENU */
+    .menu{
+      display:flex;
+      gap:10px;
+      padding:12px;
+      justify-content:center;
+      background:rgba(10,18,32,0.7);
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid rgba(42,168,255,0.4);
+      position:sticky;
+      top:0;
+      z-index:100;
+    }
+
+    .menu button{
+      width:auto;
+      padding:10px 16px;
+      background:transparent;
+      border:1px solid rgba(42,168,255,0.5);
+      color:var(--text);
+      border-radius:12px;
+      transition:.2s;
+    }
+
+    .menu button:hover{
+      background:rgba(42,168,255,0.2);
+      box-shadow:0 0 10px rgba(42,168,255,0.5);
+    }
+
+    /* CONTAINERS */
+    .container{
+      display:none;
+      padding:16px;
+      opacity:0;
+      transform:translateY(10px);
+      transition:all .35s ease;
+      height:calc(100dvh - 120px);
+      overflow:auto;
+    }
+
+    .container.active{
+      display:block;
+      opacity:1;
+      transform:translateY(0);
+    }
+
+    .panel{
+      background:linear-gradient(180deg,#0b1220,#070c14);
+      padding:14px;
+      border:1px solid rgba(42,168,255,0.4);
+      border-radius:14px;
+      margin-bottom:12px;
+      box-shadow:0 0 12px rgba(42,168,255,0.15);
+    }
+
+    .card{
+      background:#070c14;
+      border:1px solid var(--main);
+      padding:10px;
+      margin-bottom:10px;
+      border-radius:10px;
+    }
+
+    .delete{
+      background:var(--danger);
+      color:white;
+      border:none;
+      padding:6px 10px;
+      border-radius:8px;
+      margin-top:6px;
+    }
+
+    .stats{
+      margin:10px;
+      padding:10px;
+      border:1px solid rgba(42,168,255,0.4);
+      border-radius:10px;
+      background:rgba(7,12,20,0.8);
+    }
+
+    /* MOBILE FIX */
+    @media (max-width:768px){
+      .menu{
+        position:fixed;
+        bottom:0;
+        left:0;
+        right:0;
+        top:auto;
+        justify-content:space-around;
+        border-top:1px solid rgba(42,168,255,0.4);
+      }
+
+      .container{
+        padding-bottom:90px;
+      }
+    }
+
+    *{
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="bootScreen">
+  <div class="bootTitle">WCZYTYWANIE...</div>
+  <div class="bootBar"><div class="bootFill"></div></div>
+</div>
+
+<div id="loginScreen">
+  <h2 style="color:var(--main)">DOSTĘP</h2>
+  <input type="password" id="pass" placeholder="Kod dostępu" />
+  <button onclick="login()">WEJDŹ</button>
+  <div id="loginError">❌ NIEPRAWIDŁOWY KOD DOSTĘPU</div>
+</div>
+
+<div id="app">
+<header>🦇 SYSTEM</header>
+
+<div class="menu">
+  <button onclick="show('contacts')">Kontakty</button>
+  <button onclick="show('add')">Dodaj</button>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div id="contacts" class="container active">
+  <div class="panel">
+    <input id="search" placeholder="Skanuj bazę..." onkeyup="render()" />
+    <div id="contactsList"></div>
+  </div>
+</div>
+
+<div id="add" class="container">
+  <div class="panel">
+    <input id="name" placeholder="Imię i nazwisko" />
+    <input id="phone" placeholder="Telefon" />
+    <input id="email" placeholder="E-mail" />
+    <input id="address" placeholder="Adres" />
+    <input id="tags" placeholder="Tagi" />
+    <textarea id="notes" placeholder="Notatki"></textarea>
+    <button onclick="addContact()">DODAJ KONTAKT</button>
+  </div>
+</div>
+</div>
+
+<script>
+const PASSWORD="batman";
+let contacts = JSON.parse(localStorage.getItem("bat_contacts") || "[]");
+
+window.onload=()=>{
+  setTimeout(()=>{
+    bootScreen.style.display="none";
+    loginScreen.style.display="flex";
+  },3000);
+
+  render();
+}
+
+function login(){
+  if(pass.value===PASSWORD){
+    loginScreen.style.display="none";
+    app.style.display="block";
+    document.getElementById("loginError").style.display="none";
+  } else {
+    document.getElementById("loginError").style.display="block";
+  }
+}
+
+function save(){
+  localStorage.setItem("bat_contacts", JSON.stringify(contacts));
+}
+
+function show(id){
+  document.querySelectorAll(".container").forEach(c=>{
+    c.classList.remove("active");
+    setTimeout(()=>c.style.display="none",300);
+  });
+
+  const el=document.getElementById(id);
+  setTimeout(()=>{
+    el.style.display="block";
+    setTimeout(()=>el.classList.add("active"),10);
+  },300);
+}
+
+function addContact(){
+  const nameEl = document.getElementById("name");
+  const phoneEl = document.getElementById("phone");
+  const emailEl = document.getElementById("email");
+  const addressEl = document.getElementById("address");
+  const tagsEl = document.getElementById("tags");
+  const notesEl = document.getElementById("notes");
+
+  contacts.unshift({
+    id: Date.now(),
+    name: nameEl.value,
+    phone: phoneEl.value,
+    email: emailEl.value,
+    address: addressEl.value,
+    tags: tagsEl.value,
+    notes: notesEl.value
+  });
+
+  save();
+  render();
+
+  nameEl.value = "";
+  phoneEl.value = "";
+  emailEl.value = "";
+  addressEl.value = "";
+  tagsEl.value = "";
+  notesEl.value = "";
+}
+
+function render(){
+  let s = search.value?.toLowerCase() || "";
+  let box = contactsList;
+  box.innerHTML="";
+
+  let f = contacts.filter(c =>
+    (c.name+c.phone+c.email+c.tags+c.address+c.notes)
+    .toLowerCase().includes(s)
+  );
+
+  f.forEach(c=>{
+    box.innerHTML += `
+      <div class="card">
+        <b>${c.name}</b><br>
+        📞 ${c.phone}<br>
+        📧 ${c.email}<br>
+        🏠 ${c.address}<br>
+        🏷 ${c.tags}<br>
+        📝 ${c.notes}<br>
+        <button class="delete" onclick="del(${c.id})">USUŃ</button>
+      </div>
+    `;
+  });
+
+  stats.innerHTML = `KONTAKTY: ${contacts.length} | WYŚWIETLANE: ${f.length}`;
+}
+
+function del(id){
+  contacts=contacts.filter(c=>c.id!==id);
+  save();
+  render();
+}
+</script>
+
+</body>
+</html>
